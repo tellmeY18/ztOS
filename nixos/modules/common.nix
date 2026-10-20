@@ -15,6 +15,7 @@ let
 
   excluded = [
     "environment"
+    "fonts/"
     "fstab"
     "greetd/"
     "hostname"
@@ -39,6 +40,17 @@ let
       value.source = path;
     }) (lib.filter (path: wanted (relative root path)) (lib.filesystem.listFilesRecursive root))
   ) overlayRoots;
+
+  ztosFonts = pkgs.runCommand "ztos-fonts" { } ''
+    mkdir -p $out/share/fonts/truetype
+    cp ${../../os/overlay/usr/local/share/fonts/segoe}/*.ttf $out/share/fonts/truetype/
+  '';
+
+  # Do not put this under environment.etc: NixOS makes /etc/fonts a symlink to
+  # the fontconfig store path, so writing into it fails in the sandbox.
+  fontconfigConf = pkgs.writeTextDir "etc/fonts/conf.d/45-ztos-segoe.conf" (
+    builtins.readFile ../../os/overlay/etc/fonts/conf.d/45-ztos-segoe.conf
+  );
 in
 {
   config = lib.mkIf cfg.enable {
@@ -69,7 +81,9 @@ in
       dejavu_fonts
       noto-fonts
       noto-fonts-color-emoji
+      ztosFonts
     ];
+    fonts.fontconfig.confPackages = [ fontconfigConf ];
 
     environment.etc = lib.listToAttrs etcFiles;
 
