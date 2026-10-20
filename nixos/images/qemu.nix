@@ -18,7 +18,7 @@ let
 in
 pkgs.runCommand "ztos-qemu-image" { } ''
   mkdir -p $out
-  cp ${rootfs}/ext4-fs.img $out/rootfs.img
+  cp ${rootfs} $out/rootfs.img
   cp ${config.system.build.kernel}/Image $out/Image
   cp ${config.system.build.initialRamdisk}/initrd $out/initrd
   cat > $out/README <<'EOF'
