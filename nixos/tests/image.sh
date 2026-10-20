@@ -20,7 +20,9 @@ fail() {
 label=$(dumpe2fs -h "$rootfs" 2>/dev/null | sed -n 's/^Filesystem volume name: *//p')
 [ "$label" = "ZR_ARCH" ] || fail "root filesystem label is '$label', expected ZR_ARCH"
 
-debugfs -R 'stat /sbin/init' "$rootfs" 2>/dev/null | grep -q 'nixos-system-ztos' ||
+# debugfs only prints the target of a fast symlink in `stat`; store paths are
+# long enough to be slow symlinks, so read the link contents directly.
+debugfs -R 'cat /sbin/init' "$rootfs" 2>/dev/null | grep -q 'nixos-system-ztos' ||
 	fail "/sbin/init does not point at a nixos-system-ztos closure"
 debugfs -R 'stat /etc' "$rootfs" 2>/dev/null | grep -q 'Type: directory' ||
 	fail "/etc is not a directory"
