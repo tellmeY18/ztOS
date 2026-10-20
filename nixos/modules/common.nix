@@ -59,7 +59,21 @@ let
       dir = root + "/udev";
     in
     lib.optionals (builtins.pathExists dir) (
-      map builtins.readFile (lib.filesystem.listFilesRecursive dir)
+      map (
+        path:
+        lib.replaceStrings
+          [
+            "/usr/bin/chgrp"
+            "/usr/bin/chmod"
+            "/usr/bin/systemctl"
+          ]
+          [
+            "${pkgs.coreutils}/bin/chgrp"
+            "${pkgs.coreutils}/bin/chmod"
+            "${pkgs.systemd}/bin/systemctl"
+          ]
+          (builtins.readFile path)
+      ) (lib.filesystem.listFilesRecursive dir)
     )
   ) overlayRoots;
 in
