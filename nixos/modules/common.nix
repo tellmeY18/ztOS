@@ -25,6 +25,7 @@ let
     "sudoers.d/"
     "systemd/network/"
     "systemd/system/"
+    "udev/"
     "wireplumber/"
     "ztstore/"
   ];
@@ -51,6 +52,16 @@ let
   fontconfigConf = pkgs.writeTextDir "etc/fonts/conf.d/45-ztos-segoe.conf" (
     builtins.readFile ../../os/overlay/etc/fonts/conf.d/45-ztos-segoe.conf
   );
+
+  udevRules = lib.concatMap (
+    root:
+    let
+      dir = root + "/udev";
+    in
+    lib.optionals (builtins.pathExists dir) (
+      map builtins.readFile (lib.filesystem.listFilesRecursive dir)
+    )
+  ) overlayRoots;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -98,8 +109,10 @@ in
       wpa_supplicant
     ];
 
-    services.udev.extraRules = ''
-      SUBSYSTEM=="backlight", TAG+="systemd"
-    '';
+    services.udev.extraRules = lib.concatStringsSep "\n" (
+      [ ''
+        SUBSYSTEM=="backlight", TAG+="systemd"
+      '' ] ++ udevRules
+    );
   };
 }
