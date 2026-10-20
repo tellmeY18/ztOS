@@ -46,6 +46,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     rm -rf $out/usr/local/libexec/ztstore
     rm -f $out/usr/local/sbin/zboot-pacman
     rm -f $out/usr/local/sbin/zboot-firstboot
+    rm -f $out/usr/local/sbin/zboot-session
+    rm -f $out/usr/local/bin/zboot-osk
+    rm -f $out/usr/local/bin/gnome-session-starlte
+    rm -f $out/usr/local/bin/ztmetro-session
 
     chmod -R u+rwX,go+rX $out
     find $out/usr/local/bin $out/usr/local/sbin $out/usr/local/libexec -type f -exec chmod 755 {} +

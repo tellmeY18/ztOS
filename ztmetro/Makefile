@@ -1,4 +1,4 @@
-# Builds on the phone itself (aarch64 Arch Linux ARM, wlroots 0.20).
+# Builds on the phone or an aarch64-linux host (NixOS, wlroots 0.20).
 PKGS = wlroots-0.20 wayland-server xkbcommon cairo pangocairo librsvg-2.0 gdk-pixbuf-2.0 pixman-1 libdrm egl glesv2
 APP_PKGS = xkbcommon wayland-client wayland-egl egl glesv2 cairo pangocairo gdk-pixbuf-2.0
 WP := $(shell pkg-config --variable=pkgdatadir wayland-protocols)
@@ -19,8 +19,7 @@ $(info removed programs built for another machine, to build them here: $(FOREIGN
 endif
 
 all: auth/ztos-polkit-agent sounds/ztos-sounds ztmetro apps/ztapps settings/ztsettings devtest/zrndevtest devices/ztdevices perfd/zrnperfd sensord/ztoscsf-sensord modemd/ztoscorenetworkingd \
-	csf/ztoscsf notifyd/ztnotifyd phone/ztphone messages/ztmessages contacts/ztcontacts splash/ztos-splash \
-	store/ztstore
+	csf/ztoscsf notifyd/ztnotifyd phone/ztphone messages/ztmessages contacts/ztcontacts splash/ztos-splash
 
 sounds/ztos-sounds: sounds/ztos-sounds.c
 	$(CC) $(CFLAGS) $(WARN) $(shell pkg-config --cflags libpulse) -o $@ $< $(shell pkg-config --libs libpulse) -lm
@@ -79,7 +78,8 @@ messages/ztmessages: messages/ztmessages.c comm/comm.h $(CORE_DEPS)
 contacts/ztcontacts: contacts/ztcontacts.c comm/comm.h $(CORE_DEPS)
 	$(APP_BUILD) -Icomm -o $@ contacts/ztcontacts.c $(CORE) $(APP_LIBS)
 
-# the App Store: the repos in pacman.conf and the AUR (see store/README.md)
+# The legacy App Store: pacman repos and the AUR, Arch Linux ARM only. Kept
+# for the parser tests; the NixOS image uses the declarative store instead.
 STORE = store/ztstore.c store/util.c store/json.c store/pkg.c store/repo.c store/appstream.c store/aur.c \
 	store/sections.c store/search.c store/jobs.c store/icons.c store/install.c
 STORE_PKGS = librsvg-2.0 zlib
@@ -147,7 +147,7 @@ check-arch: all
 		if [ "$$m" != "$(HOST_ELF)" ]; then echo "$$f: built for another machine; run make clean"; bad=1; fi; \
 	done; exit $$bad
 
-install: check-arch
+install: check-arch store/ztstore
 	install -Dm755 auth/ztos-polkit-agent /usr/local/bin/ztos-polkit-agent
 	install -Dm755 sounds/ztos-sounds /usr/local/bin/ztos-sounds
 	install -Dm755 ztmetro /usr/local/bin/ztmetro

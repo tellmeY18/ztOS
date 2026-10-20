@@ -21,6 +21,7 @@ let
     "hostname"
     "os-release"
     "pipewire/"
+    "polkit-1/rules.d/50-ztstore.rules"
     "skel/"
     "sudoers.d/"
     "systemd/network/"

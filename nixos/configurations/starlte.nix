@@ -13,6 +13,7 @@
     ztmetro.enable = true;
     update.enable = true;
     store.enable = true;
+    store.bootstrap = true;
   };
 
   networking.hostName = "ztos";

@@ -26,12 +26,41 @@ qemu=$(command -v qemu-system-aarch64) || {
 	exit 1
 }
 
+# The image is built to fit its own closure, so packages have nowhere to go
+# until the disk grows. Grow the raw image and its filesystem before boot when
+# it has less than 2 GiB free; on later runs there is room again. The guest
+# also grows the filesystem at boot, for images enlarged by hand.
+grow=${ZTOS_QEMU_GROW:-8G}
+if [ "$grow" != 0 ] && [ -w "$rootfs" ] && command -v qemu-img >/dev/null &&
+	command -v dumpe2fs >/dev/null && command -v resize2fs >/dev/null; then
+	block_size=$(dumpe2fs -h "$rootfs" 2>/dev/null | awk -F: '/^Block size:/{print $2}' | tr -d ' ')
+	free_blocks=$(dumpe2fs -h "$rootfs" 2>/dev/null | awk -F: '/^Free blocks:/{print $2}' | tr -d ' ')
+	if [ -n "$block_size" ] && [ -n "$free_blocks" ] &&
+		[ $((free_blocks * block_size)) -lt $((2 * 1024 * 1024 * 1024)) ]; then
+		echo "growing $rootfs by $grow for packages" >&2
+		qemu-img resize -f raw "$rootfs" "+$grow"
+		e2fsck -fy "$rootfs" >/dev/null 2>&1 || true
+		resize2fs "$rootfs" >/dev/null
+	fi
+fi
+
+if [ -f "$dir/cmdline" ]; then
+	append=$(cat "$dir/cmdline")
+else
+	append="root=/dev/vda rw rootfstype=ext4 console=ttyAMA0 init=/init"
+fi
+
+width=${ZTOS_QEMU_WIDTH:-540}
+height=${ZTOS_QEMU_HEIGHT:-1110}
+
 accel=tcg
 cpu=max
+display=${ZTOS_QEMU_DISPLAY:-default}
 case "$(uname -s)" in
 Darwin)
 	accel=hvf
 	cpu=host
+	[ "$display" = default ] && display=cocoa,show-cursor=on
 	;;
 Linux)
 	if [ -w /dev/kvm ]; then
@@ -49,12 +78,12 @@ exec "$qemu" \
 	-m 4096 \
 	-kernel "$kernel" \
 	-initrd "$initrd" \
-	-append "root=/dev/vda rw rootfstype=ext4 console=ttyAMA0" \
+	-append "$append" \
 	-drive "file=$rootfs,if=virtio,format=raw" \
-	-device virtio-gpu-pci \
+	-device "virtio-gpu-pci,xres=$width,yres=$height" \
 	-device qemu-xhci \
 	-device usb-kbd \
 	-device usb-tablet \
 	-nic user,model=virtio-net-pci \
 	-serial mon:stdio \
-	-display "${ZTOS_QEMU_DISPLAY:-default}"
+	-display "$display"

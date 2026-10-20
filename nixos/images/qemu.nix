@@ -21,6 +21,7 @@ pkgs.runCommand "ztos-qemu-image" { } ''
   cp ${rootfs} $out/rootfs.img
   cp ${config.system.build.kernel}/Image $out/Image
   cp ${config.system.build.initialRamdisk}/initrd $out/initrd
+  echo "root=/dev/vda rw rootfstype=ext4 console=ttyAMA0 init=${config.system.build.toplevel}/init" > $out/cmdline
   cat > $out/README <<'EOF'
   Boot this image with the ztos-qemu helper from the devshell:
 

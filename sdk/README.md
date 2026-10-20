@@ -52,10 +52,11 @@ reads zip archives from their end, so the launcher just runs the phone's
 Qt's own title bar.
 
 Qt itself is not inside the binary. The phone provides it (`pyside6`,
-`qt6-wayland`, `qt6-svg` from Arch Linux ARM), which is why apps stay small. The native renderer can be built on the phone
-during deployment, so a phone cross compiler is optional.
+`qt6-wayland`, `qt6-svg` from nixpkgs), which is why apps stay small. The native
+renderer can be built on the phone during deployment, so a phone cross compiler
+is optional.
 
-`ztos-sdk install` copies files into the alarm user's home on the phone:
+`ztos-sdk install` copies files into the ztOS user's home on the phone:
 
 | what | where |
 |---|---|
@@ -69,19 +70,27 @@ Then it tells the shell to reread the app list. Nothing needs root, and
 
 ## Setting up
 
-On the laptop you need Python 3.11 or newer and PySide6 (`pacman -S pyside6`).
-Qt Designer is optional (`qt6-tools`). Put `sdk/bin` on your PATH, or link
-`sdk/bin/ztos-sdk` into `~/.local/bin`.
+On the laptop you need Python 3.11 or newer and PySide6. On NixOS, enter a
+shell with them:
 
-The phone needs Qt for Python. Check it, then install what is missing (this
-needs internet on the phone, and root):
+```sh
+nix shell nixpkgs#python3 nixpkgs#pyside6 nixpkgs#qt6.qtbase
+```
+
+Qt Designer is optional (`nix shell nixpkgs#qt6.qtbase`). Put `sdk/bin` on your
+PATH, or link `sdk/bin/ztos-sdk` into `~/.local/bin`.
+
+The phone needs Qt for Python. Check it, then install what is missing. On NixOS,
+add the packages to the system or pin them with `ztos-store`:
 
 ```
 ztos-sdk doctor
-ztos-sdk doctor --fix       # pacman -S --needed python pyside6 qt6-wayland qt6-svg
+sudo ztos-store pin nixpkgs#python3
+sudo ztos-store pin nixpkgs#pyside6
+sudo ztos-store pin nixpkgs#qt6.qtbase
 ```
 
-The phone is `alarm@172.16.42.1` (USB networking). Point at another address
+The phone is `ztos@172.16.42.1` (USB networking). Point at another address
 with `--device user@host`, `$ZTOS_DEVICE`, or `[device] host` in `ztos.toml`.
 ssh asks for the password. Set `$ZTOS_PASSWORD` to skip the prompt, and
 `$ZTOS_ROOT_PASSWORD` for `doctor --fix`. Neither is ever written to a file.
@@ -105,7 +114,8 @@ dependencies = []          # pure-Python packages from PyPI, bundled in
 
 Ids starting with `zt` or `zrn` are reserved for the system's own apps.
 Packages with compiled code cannot be bundled. Install those on the phone with
-pacman (`python-...`) and import them as normal.
+`ztos-store` (for example `sudo ztos-store pin nixpkgs#python3Packages.numpy`)
+and import them as normal.
 
 ## The `ztos` module
 

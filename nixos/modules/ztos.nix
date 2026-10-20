@@ -67,6 +67,8 @@ in
 
     store = {
       enable = lib.mkEnableOption "the no-profile ztOS package store";
+
+      bootstrap = lib.mkEnableOption "a writable /etc/nixos flake for the store";
     };
   };
 
@@ -84,11 +86,15 @@ in
       vendorName = "ztOS";
       vendorId = "ztos";
       extraOSReleaseArgs = {
-        PRETTY_NAME = "ztOS ALPHA-2";
+        PRETTY_NAME = "ztOS 0.1.0-ALPHA-2";
         VERSION_ID = "0.1.0-ALPHA-2";
         BUILD_ID = "ALPHA-2";
         ANSI_COLOR = "38;2;0;80;239";
         LOGO = "ztos";
+        HOME_URL = "https://github.com/Zerone-Laboratories/ztOS";
+        DOCUMENTATION_URL = "https://github.com/Zerone-Laboratories/ztOS#readme";
+        SUPPORT_URL = "https://github.com/Zerone-Laboratories/ztOS/issues";
+        BUG_REPORT_URL = "https://github.com/Zerone-Laboratories/ztOS/issues";
       };
     };
 

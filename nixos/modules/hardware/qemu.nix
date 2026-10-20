@@ -41,6 +41,19 @@ in
 
     services.qemuGuest.enable = true;
 
+    # The image is built to fit its closure. Grow the filesystem when the raw
+    # disk has been enlarged, either by ztos-qemu or by hand with qemu-img.
+    systemd.services.ztos-grow-root = {
+      description = "Grow the ztOS root filesystem to fill the QEMU disk";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.e2fsprogs}/bin/resize2fs /dev/vda";
+        RemainAfterExit = true;
+      };
+    };
+
     environment.systemPackages = with pkgs; [
       parted
       gptfdisk

@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=App Store
-Comment=Apps from your repos and the AUR
+Name=App Store (legacy)
+Comment=Legacy pacman/AUR front end; not used on NixOS
 Exec=ztstore
 Terminal=false
 Type=Application

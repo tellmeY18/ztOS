@@ -12,8 +12,9 @@ WebKit, and hardware-accelerated compositing out of the box. It is the right
 engine for "very efficient, low resource, HW-accelerated on mobile". WebKitGTK
 would drag in GTK and a second toolkit's event loop; we do not use it.
 
-Packages (Arch / Arch Linux ARM): `wpewebkit`, `wpebackend-fdo`, `libwpe`.
-pkg-config: `wpe-webkit-2.0` (or `-1.1`), `wpebackend-fdo-1.0`, `wpe-1.0`.
+Packages: `wpewebkit`, `wpebackend-fdo`, `libwpe` (from nixpkgs; the browser is
+not yet part of the flake build). pkg-config: `wpe-webkit-2.0` (or `-1.1`),
+`wpebackend-fdo-1.0`, `wpe-1.0`.
 
 ## How it is put together
 
@@ -64,14 +65,14 @@ One `WebKitWebsiteDataManager` rooted at `~/.local/share/superscan`:
 
 ## Build and run
 
-    make browser/superscan     # on the phone, with the rest of ztmetro
+    make browser/superscan     # on an aarch64-linux host, with the rest of ztmetro
 
-Needs the WPE packages above on the phone. See the Makefile for the exact
-pkg-config modules; the WebKit API is version-sensitive, so the first build on
-the device may need small deltas against the installed `wpe-webkit` version.
+Needs the WPE packages above in the build environment. See the Makefile for
+the exact pkg-config modules; the WebKit API is version-sensitive, so the first
+build may need small deltas against the installed `wpe-webkit` version.
 
 ## State
 
 Iteration 1: the chrome, navigation state, and the WPE view wiring. The
-engine glue targets `wpe-webkit-2.0`; confirm the installed version on the
-phone and adjust if the build reports a changed symbol.
+engine glue targets `wpe-webkit-2.0`; confirm the installed version in the
+build environment and adjust if the build reports a changed symbol.

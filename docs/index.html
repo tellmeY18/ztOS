@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ztOS wiki</title>
-<meta name="description" content="ztOS is a phone operating system with Windows Phone 8.1's look and motion, on Arch Linux ARM and mainline Linux, running on the Galaxy S9.">
+<meta name="description" content="ztOS is a phone operating system with Windows Phone 8.1's look and motion, built on NixOS and mainline Linux, running on the Galaxy S9 and in QEMU.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #f2f2f2;
@@ -235,6 +235,7 @@
       <li><a href="#screens">Screenshots</a></li>
       <li><a href="#ztmetro">ztMETRO</a></li>
       <li><a href="#apps">Apps</a></li>
+      <li><a href="#packages">Packages</a></li>
       <li><a href="#sdk">The SDK</a></li>
       <li><a href="#services">System services</a></li>
       <li>
@@ -266,8 +267,8 @@
       <div>
         <p class="crumb">Zerone Laboratories / operating systems</p>
         <h1>ztOS</h1>
-        <p class="lead">A phone operating system with Windows Phone 8.1's look and motion, on Arch Linux ARM and mainline Linux.</p>
-        <p>ztOS is the ztMETRO shell, its own apps, an updater and an SDK for apps in Python and Qt, on an ordinary Arch Linux ARM system. It runs on the Samsung Galaxy S9 (SM-G960N, starlte) and in the QEMU emulator. Everything that moves is drawn by the GPU.</p>
+        <p class="lead">A phone operating system with Windows Phone 8.1's look and motion, built on NixOS and mainline Linux.</p>
+        <p>ztOS is the ztMETRO shell, its own apps, an updater, a package store and an SDK for apps in Python and Qt, on an ordinary NixOS system. It runs on the Samsung Galaxy S9 (SM-G960N, starlte) and in the QEMU emulator. Everything that moves is drawn by the GPU.</p>
         <p>It is alpha software. The S9 port runs a mainline 7.1 kernel with the phone's GPU, display, touch, Wi-Fi, 4G data, sound and sensors working. ztConflo, its image builder, is how it reaches other phones.</p>
         <div class="actions">
           <a class="btn" href="#installing">Install it</a>
@@ -277,9 +278,9 @@
       <aside class="infobox" aria-label="At a glance">
         <div class="cap">ztOS at a glance</div>
         <dl>
-          <dt>Version</dt><dd>0.1.0 alpha 2</dd>
+          <dt>Version</dt><dd>0.1.0-ALPHA-2</dd>
           <dt>Shell</dt><dd>ztMETRO</dd>
-          <dt>Base</dt><dd>Arch Linux ARM, systemd</dd>
+          <dt>Base</dt><dd>NixOS, systemd</dd>
           <dt>Kernel</dt><dd>Mainline Linux 7.1</dd>
           <dt>Devices</dt><dd>Galaxy S9 (starlte), QEMU; others through <a href="#ztconflo">ztConflo</a></dd>
           <dt>Graphics</dt><dd>Mesa Panfrost, OpenGL ES 3.1 on the S9's Mali-G72</dd>
@@ -318,7 +319,7 @@
           <div><dt>Keyboard</dt><dd>On-screen, lifting the app so the text box stays in sight.</dd></div>
           <div><dt>Animation speed</dt><dd>One setting for the whole interface, shell and apps, 75% by default.</dd></div>
           <div><dt>Haptics</dt><dd>Strength per kind of touch, set in Settings.</dd></div>
-          <div><dt>Other apps</dt><dd>Firefox, Chromium and any Linux app run as windows inside it.</dd></div>
+          <div><dt>Other apps</dt><dd>Packages installed with the Store app or <code>ztos-store</code> — Firefox, Chromium, terminal — open as windows inside it.</dd></div>
         </dl>
       </div>
     </div>
@@ -326,7 +327,7 @@
 
   <section class="section" id="apps">
     <div class="wrap">
-      <div><h2>Apps</h2><p class="sub">What comes installed.</p></div>
+      <div><h2>Apps</h2><p class="sub">What is in the image, and how to add more.</p></div>
       <div class="body">
         <div class="table-scroll">
           <table>
@@ -335,13 +336,26 @@
               <tr><td>Settings</td><td>Wi-Fi, cellular and SIM, haptics, quick actions, theme, developer options</td><td>ZrnMetroCore (C)</td></tr>
               <tr><td>Phone, Messaging, People</td><td>Calls, SMS and contacts, in the same style</td><td>ZrnMetroCore (C)</td></tr>
               <tr><td>ZrnDevTest</td><td>What the hardware reports: system, sensors live, the journal and kernel log</td><td>ZrnMetroCore (C)</td></tr>
-              <tr><td>Welcome</td><td>The first-start tour: Start, getting around, your apps, making apps</td><td>ztOS SDK (Python)</td></tr>
-              <tr><td>Updates</td><td>Shows available updates and installs them</td><td>ztOS SDK (Python)</td></tr>
-              <tr><td>Firefox, Chromium, terminal</td><td>Ordinary Linux apps, shown as windows</td><td>Arch packages</td></tr>
+              <tr><td>Devices and Services</td><td>What is running, what has crashed, and what is missing</td><td>ZrnMetroCore (C)</td></tr>
+              <tr><td>Firefox, Chromium, terminal</td><td>Ordinary Linux apps installed with the Store app or <code>ztos-store</code>, shown as windows</td><td>Nix packages</td></tr>
             </tbody>
           </table>
         </div>
-        <p>The native apps share ZrnMetroCore, a small toolkit with the shell's own widgets, page turns, pivots and press tilt.</p>
+        <p>The native apps share ZrnMetroCore, a small toolkit with the shell's own widgets, page turns, pivots and press tilt. Add packages with the Store app or <code>ztos-store</code>; an installed app appears in the app list.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="packages">
+    <div class="wrap">
+      <div><h2>Packages</h2><p class="sub">Nix packages, without a user profile.</p></div>
+      <div class="body">
+        <p>The Store app and <code>ztos-store</code> install apps by adding them to <code>/etc/nixos/packages.nix</code> and rebuilding the NixOS generation. Nothing is added to a user profile, so an installed app stays installed across updates and rollbacks.</p>
+<pre>ztos-store search firefox
+sudo ztos-store install firefox
+ztos-store installed
+sudo ztos-store uninstall firefox</pre>
+        <p>The Store app uses the same commands and runs the rebuild without a password prompt. A temporary package can still be pinned under <code>/nix/var/nix/gcroots/ztos/apps</code>; its launcher calls <code>ztos-run</code>. Pinned launchers are written to <code>/var/lib/ztos/share/applications</code>, which ztMETRO scans alongside the system's applications.</p>
       </div>
     </div>
   </section>
@@ -377,7 +391,8 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
               <tr><td>ztOSCoreNetworking</td><td>The modem, calls, messages and mobile data, and joining Wi-Fi</td></tr>
               <tr><td>ztOSCirrusAudio</td><td>Sound: the audio DSP and the Cirrus speaker amplifiers</td></tr>
               <tr><td>zrnperfd</td><td>Power: dynamic boost from the efficiency cores up, and core power-down</td></tr>
-              <tr><td>ztos-update</td><td>The updater: a daily check, a notification, and the Updates app</td></tr>
+              <tr><td>ztos-update</td><td>The updater: a daily check and a notification</td></tr>
+              <tr><td>Store / ztos-store / ztos-run</td><td>Install, keep and run Nix packages without adding them to a profile</td></tr>
             </tbody>
           </table>
         </div>
@@ -389,22 +404,22 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
     <div class="wrap">
       <div><h2>The Galaxy S9 port</h2><p class="sub">Mainline Linux on an Exynos 9810.</p></div>
       <div class="body">
-        <p>ztOS's first phone is the Galaxy S9, SM-G960N (starlte). It runs mainline Linux 7.1 with the Exynos 9810 drivers, booting from the phone's internal storage, with Arch on BOOT and TWRP left in RECOVERY. The phone's hardware support is built as loadable kernel modules, so drivers can be developed without reflashing. The modem and sensor hub still use Samsung's own Android daemons, run from the phone's stock partitions.</p>
+        <p>ztOS's first phone is the Galaxy S9, SM-G960N (starlte). It runs mainline Linux 7.1 with the Exynos 9810 drivers, booting from the phone's internal storage, with NixOS on USERDATA and TWRP left in RECOVERY. The phone's hardware support is built as loadable kernel modules, so drivers can be developed without reflashing. The modem and sensor hub still use Samsung's own Android daemons, run from the phone's stock partitions.</p>
 
         <h3 id="installing">Installing</h3>
         <div class="alert" role="note">
           <b>This erases the phone</b>
           Android and everything in its storage are replaced. The phone's IMEI and modem calibration are never touched. Read the <a href="#quirks">known quirks</a> below first.
         </div>
-        <p>You need a Linux computer with about 15 GB free, an internet connection, a USB cable, and the phone charged above 50%. The bootloader must already be unlocked with TWRP installed in RECOVERY.</p>
+        <p>You need an <code>aarch64-linux</code> build machine (or the CI image), an internet connection, a USB cable, and the phone charged above 50%. The bootloader must already be unlocked with TWRP installed in RECOVERY.</p>
         <ol class="steps">
           <li><div><b>Boot the phone into TWRP</b><span>Turn the phone off, then hold Volume Up, Bixby and Power until TWRP appears. Connect it to the computer with the USB cable.</span></div></li>
           <li><div><b>Get ztOS on the computer</b><span><code>git clone https://github.com/Zerone-Laboratories/ztOS.git</code><br><code>cd ztOS</code></span></div></li>
-          <li><div><b>Run the installer</b><span><code>installer/ztos install --target starlte</code><br>Choose 1, then pick a user name and password. The build takes 30 to 60 minutes.</span></div></li>
-          <li><div><b>Confirm the install</b><span>Answer yes to write the boot image, then type <code>ERASE</code> when asked. Leave the cable in until it says done.</span></div></li>
-          <li><div><b>Restart the phone</b><span>Hold Power, Volume Up and Volume Down. The first start takes about a minute, then the Welcome app shows how ztOS is used.</span></div></li>
+          <li><div><b>Build the NixOS image</b><span><code>nix build .#images.starlte -L</code><br>On macOS, use the CI-built starlte artifact: the image is an <code>aarch64-linux</code> output.</span></div></li>
+          <li><div><b>Flash it from TWRP</b><span><code>./result/flash.sh</code><br>Confirm the boot image, then type <code>ERASE</code> when asked. Leave the cable in until it says done.</span></div></li>
+          <li><div><b>Restart the phone</b><span>Hold Power, Volume Up and Volume Down. The first start takes about a minute, then ztMETRO opens on Start.</span></div></li>
         </ol>
-        <p>If something fails, the phone goes back to TWRP by itself. Start again from step 3. To try ztOS without a phone, run <code>installer/ztos install --target qemu</code> instead. It opens ztOS in a phone-shaped window on the computer.</p>
+        <p>If something fails, the phone goes back to TWRP by itself. Start again from step 3. To try ztOS without a phone, download the QEMU artifact and run <code>nix develop</code>, then <code>ztos-qemu /path/to/bundle</code>.</p>
 
         <h3 id="hardware">Hardware status</h3>
         <div class="table-scroll">
@@ -435,11 +450,11 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
           <li><b>A driver that crashed while loading is skipped at the next boot,</b> so a crash can't become a boot loop. Remove its mark file under <code>/var/lib</code> to try again.</li>
           <li><b>Reboot rather than unload a driver module</b> to try a new build; a failed unload has left the phone unable to shut down.</li>
           <li><b>The clock resets at every boot</b> until the network sets it.</li>
-          <li><b>Keep the stock Android partitions.</b> The installer writes only BOOT and USERDATA, and the modem needs the rest.</li>
+          <li><b>Keep the stock Android partitions.</b> <code>flash.sh</code> writes only BOOT and USERDATA, and the modem needs the rest.</li>
         </ul>
 
         <h3 id="recovery">Getting back in</h3>
-        <p>Nothing can leave the phone unbootable, and every layer has a way back. If Arch doesn't come up, the initramfs opens a rescue shell on the same USB network. If the kernel hangs, a watchdog resets the phone into TWRP after 30 seconds. If nothing appears on USB at all, the boot stage resets the phone after ten minutes. And download mode, which can't be overwritten, has everything needed to put the stock firmware back.</p>
+        <p>Nothing can leave the phone unbootable, and every layer has a way back. If NixOS doesn't come up, the phone falls back to TWRP. If the kernel hangs, a watchdog resets the phone into TWRP after 30 seconds. Download mode, which can't be overwritten, has everything needed to put the stock firmware back.</p>
       </div>
     </div>
   </section>
@@ -448,7 +463,7 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
     <div class="wrap">
       <div><h2>ztConflo: other phones</h2><p class="sub">How ztOS leaves the S9.</p></div>
       <div class="body">
-        <p>ztConflo takes a phone's codename and builds a flashable ztOS image for it: Arch Linux ARM with ztMETRO, on a kernel and boot setup that postmarketOS already boots. It looks in the ztOS device registry first and falls back to postmarketOS for phones nobody has ported ztOS to yet. It never ports new hardware.</p>
+        <p>ztConflo takes a phone's codename and builds a flashable ztOS image for it: NixOS with ztMETRO, on a kernel and boot setup that postmarketOS already boots. It looks in the ztOS device registry first and falls back to postmarketOS for phones nobody has ported ztOS to yet. It never ports new hardware.</p>
         <dl class="rules">
           <div><dt>Eligible phones</dt><dd>135 today, with a mainline aarch64 kernel; 71 of them archived by postmarketOS, and flagged.</dd></div>
           <div><dt>GPU check</dt><dd>Phones without a Mesa GPU driver still build, with a warning that ztMETRO won't start.</dd></div>
@@ -469,13 +484,13 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
       <div class="body">
         <div class="alert" role="note">
           <b>Alpha</b>
-          ztOS 0.1.0 alpha 2 runs daily on one Galaxy S9. The installer's phone path is implemented but not yet validated end to end on a fresh install, and no ztConflo image has booted on another phone yet.
+          ztOS 0.1.0-ALPHA-2 runs daily on one Galaxy S9. The NixOS starlte image is built and internally consistent but has not been boot-tested on a fresh install, and no ztConflo image has booted on another phone yet.
         </div>
         <ul class="prose" style="margin-top:1.25rem">
           <li>The first phone besides the S9 booting a ztConflo build.</li>
           <li>The sound of calls, and receiving SMS.</li>
           <li>Suspend on the S9, for idle battery life closer to Android's.</li>
-          <li>Native apps drawing with OpenGL ES the way the shell does, and a ztOS package repository for updates.</li>
+          <li>Native apps drawing with OpenGL ES the way the shell does, and more apps in the Nix package store.</li>
         </ul>
       </div>
     </div>

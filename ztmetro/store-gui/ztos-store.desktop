@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Store
+Comment=Install and remove apps
+Exec=ztos-store-gui
+Terminal=false
+Type=Application
+Icon=ztos-store
+Categories=System;PackageManager;
+StartupNotify=true

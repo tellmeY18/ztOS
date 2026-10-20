@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * ztstore: the ztOS App Store. Apps from the repos in pacman.conf and from the
- * AUR, in one place: lists of what is popular and new (which lists, from a
+ * ztstore: the legacy Arch Linux ARM App Store. Apps from the repos in
+ * pacman.conf and from the AUR, in one place: lists of what is popular and new
+ * (which lists, from a
  * file: see sections.h), categories and groups, search, details, installing
  * and removing, and updates. Built on ZrnMetroCore.
  *

@@ -4,9 +4,9 @@
 #   ztos-update check    refresh the flake inputs and say whether anything moved
 #   ztos-update apply    rebuild the system from the (now refreshed) flake
 #
-# Unlike the Arch updater this does not run pacman: the complete system is one
-# NixOS generation, so an update is one nixos-rebuild and a rollback is one
-# generation in the boot menu.
+# This is a whole-system update, not a package-manager update: the complete
+# system is one NixOS generation, so an update is one nixos-rebuild and a
+# rollback is one generation in the boot menu.
 set -euo pipefail
 
 STATE=/run/ztos-update

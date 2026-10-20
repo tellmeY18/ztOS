@@ -84,6 +84,8 @@
               runtimeInputs = [
                 pkgs.qemu
                 pkgs.coreutils
+                pkgs.e2fsprogs
+                pkgs.gawk
               ];
               text = builtins.readFile ./nixos/scripts/run-qemu;
             })
