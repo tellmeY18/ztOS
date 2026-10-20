@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# ztos-update: update a ztOS/NixOS system from its flake.
+#
+#   ztos-update check    refresh the flake inputs and say whether anything moved
+#   ztos-update apply    rebuild the system from the (now refreshed) flake
+#
+# Unlike the Arch updater this does not run pacman: the complete system is one
+# NixOS generation, so an update is one nixos-rebuild and a rollback is one
+# generation in the boot menu.
+set -euo pipefail
+
+STATE=/run/ztos-update
+LOG=/var/log/ztos-update.log
+LIST=/var/lib/ztos/updates
+
+mkdir -p "$STATE" /var/lib/ztos
+if [ -f /etc/ztos/update.conf ]; then
+  # shellcheck disable=SC1091
+  . /etc/ztos/update.conf
+fi
+
+FLAKE=${FLAKE:-/etc/nixos}
+HOST=${HOST:-$(uname -n)}
+MODE=${MODE:-switch}
+
+status() {
+  printf '%s\n' "$*" >"$STATE/status.new"
+  mv "$STATE/status.new" "$STATE/status"
+}
+
+tell() {
+  local ctl
+  for ctl in /run/user/*/ztmetro.ctl; do
+    [ -p "$ctl" ] || continue
+    timeout 2 sh -c 'printf "%s\n" "$2" > "$1"' _ "$ctl" "notify Updates|$1|$2" || true
+  done
+}
+
+exec 9>"$STATE/lock"
+flock -n 9 || {
+  echo "ztos-update: already running" >&2
+  exit 1
+}
+
+case "${1:-}" in
+  check)
+    status checking
+    echo "== check $(date)" >>"$LOG"
+
+    before=""
+    if [ -f "$FLAKE/flake.lock" ]; then
+      before=$(sha256sum "$FLAKE/flake.lock" | cut -d' ' -f1)
+    fi
+
+    if ! nix flake update --flake "$FLAKE" >>"$LOG" 2>&1; then
+      status "failed check"
+      tell "Update check failed" "See /var/log/ztos-update.log."
+      exit 1
+    fi
+
+    after=$(sha256sum "$FLAKE/flake.lock" | cut -d' ' -f1)
+    if [ -n "$before" ] && [ "$before" = "$after" ]; then
+      : >"$LIST"
+      status uptodate
+    else
+      printf 'system %s -> %s\n' "${before:-new}" "$after" >"$LIST"
+      status "available 1"
+      tell "Update available" "A new ztOS generation is ready to build."
+    fi
+    ;;
+
+  apply)
+    echo "== apply $(date)" >>"$LOG"
+    status downloading
+
+    if nixos-rebuild "$MODE" --flake "$FLAKE#$HOST" >>"$LOG" 2>&1; then
+      : >"$LIST"
+      status "done 1"
+      tell "ztOS is up to date" "The new generation is installed."
+    else
+      status "failed install"
+      tell "Update failed" "See /var/log/ztos-update.log."
+      exit 1
+    fi
+    ;;
+
+  *)
+    echo "usage: ztos-update check | apply" >&2
+    exit 2
+    ;;
+esac

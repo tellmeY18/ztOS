@@ -173,6 +173,21 @@ static int icon_cmp(const void *a, const void *b) {
 	return c ? c : y->score - x->score;	/* the best of a name first */
 }
 
+static void xdg_icons(void) {
+	const char *xdg = getenv("XDG_DATA_DIRS");
+	char copy[1024];
+	if (!xdg || !*xdg) {
+		return;
+	}
+	snprintf(copy, sizeof(copy), "%s", xdg);
+	char *save = NULL;
+	for (char *dir = strtok_r(copy, ":", &save); dir; dir = strtok_r(NULL, ":", &save)) {
+		char path[768];
+		snprintf(path, sizeof(path), "%s/icons", dir);
+		icons_walk(path, "", 0);
+	}
+}
+
 static void icons_index(void) {
 	for (size_t i = 0; i < n_icons; i++) {
 		free(icons[i].name);
@@ -185,6 +200,8 @@ static void icons_index(void) {
 	icons_walk(path, "", 0);
 	icons_walk("/usr/share/icons", "", 0);
 	icons_walk("/usr/local/share/icons", "", 0);
+	xdg_icons();
+	icons_walk("/var/lib/ztos/share/icons", "", 0);
 	icons_walk("/var/lib/flatpak/exports/share/icons", "", 0);
 	icons_walk("/usr/share/pixmaps", "", 4);	/* that folder alone, not below it */
 	qsort(icons, n_icons, sizeof(*icons), icon_cmp);
@@ -616,7 +633,7 @@ static bool in_path(const char *command) {
 		return access(name, X_OK) == 0;
 	}
 	const char *path = getenv("PATH");
-	char *copy = strdup(path ? path : "/usr/local/bin:/usr/bin"), *save = NULL;
+	char *copy = strdup(path ? path : "/run/current-system/sw/bin:/usr/local/bin:/usr/bin"), *save = NULL;
 	bool found = false;
 	for (char *dir = strtok_r(copy, ":", &save); dir && !found; dir = strtok_r(NULL, ":", &save)) {
 		char full[768];
@@ -712,19 +729,34 @@ static void desktop_read(const char *dir, const char *file) {
 	apps[n_apps++] = app;
 }
 
-static const char *app_dirs[8];
+static const char *app_dirs[16];
 static int n_app_dirs;
 
 static void dirs_init(void) {
 	static char user[512], flat_user[512];
+	static char xdg_apps[8][768];
 	const char *home = getenv("HOME");
 	snprintf(user, sizeof(user), "%s/.local/share/applications", home ? home : "");
 	snprintf(flat_user, sizeof(flat_user), "%s/.local/share/flatpak/exports/share/applications", home ? home : "");
 	app_dirs[n_app_dirs++] = user;
 	app_dirs[n_app_dirs++] = "/usr/local/share/applications";
 	app_dirs[n_app_dirs++] = "/usr/share/applications";
+	app_dirs[n_app_dirs++] = "/var/lib/ztos/share/applications";
 	app_dirs[n_app_dirs++] = flat_user;
 	app_dirs[n_app_dirs++] = "/var/lib/flatpak/exports/share/applications";
+
+	const char *xdg = getenv("XDG_DATA_DIRS");
+	if (xdg && *xdg) {
+		char copy[1024];
+		int xi = 0;
+		snprintf(copy, sizeof(copy), "%s", xdg);
+		char *save = NULL;
+		for (char *dir = strtok_r(copy, ":", &save); dir && n_app_dirs < 14 && xi < 8; dir = strtok_r(NULL, ":", &save)) {
+			snprintf(xdg_apps[xi], sizeof(xdg_apps[xi]), "%s/applications", dir);
+			app_dirs[n_app_dirs++] = xdg_apps[xi];
+			xi++;
+		}
+	}
 }
 
 /* What the folders look like from outside: when this is the same as last time,

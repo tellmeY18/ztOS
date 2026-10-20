@@ -1,0 +1,83 @@
+name: ztOS NixOS image
+
+on:
+  push:
+    branches:
+      - nixos-experimentation
+  pull_request:
+    paths:
+      - "flake.nix"
+      - "flake.lock"
+      - "nixos/**"
+      - "ztmetro/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    name: Evaluate flake and configurations
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Evaluate
+        run: |
+          set -euxo pipefail
+          nix flake show --all-systems
+          nix eval --raw .#nixosConfigurations.ztos-qemu.config.system.build.toplevel.drvPath
+          nix eval --raw .#nixosConfigurations.ztos-starlte.config.system.build.toplevel.drvPath
+          nix eval --raw .#images.starlte.drvPath
+
+  image:
+    name: Build starlte boot and rootfs images
+    runs-on: ubuntu-24.04-arm
+    needs: eval
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Build
+        run: |
+          set -euxo pipefail
+          nix build .#images.starlte -L
+          mkdir -p artifacts
+          cp -L result/* artifacts/
+          (cd artifacts && sha256sum boot.img rootfs.img > SHA256SUMS)
+          ls -lh artifacts
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ztos-starlte-image
+          path: artifacts/
+          if-no-files-found: error
+
+  test:
+    name: Test image structure
+    runs-on: ubuntu-24.04
+    needs: image
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ztos-starlte-image
+          path: artifacts
+      - name: Install image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends e2fsprogs jq
+      - name: Check boot image is the tested 7.1 kernel
+        run: cmp artifacts/boot.img prebuilts/boot/ztos-starlte-boot.img
+      - name: Check rootfs layout
+        run: ./nixos/tests/image.sh artifacts

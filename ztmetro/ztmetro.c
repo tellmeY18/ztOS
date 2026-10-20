@@ -2482,7 +2482,7 @@ static bool in_path(const char *command) {
 		return access(name, X_OK) == 0;
 	}
 	const char *path = getenv("PATH");
-	char *copy = strdup(path ? path : "/usr/local/bin:/usr/bin"), *save = NULL;
+	char *copy = strdup(path ? path : "/run/current-system/sw/bin:/usr/local/bin:/usr/bin"), *save = NULL;
 	bool found = false;
 	for (char *dir = strtok_r(copy, ":", &save); dir && !found;
 			dir = strtok_r(NULL, ":", &save)) {
@@ -4656,9 +4656,10 @@ static void shade_set_open(struct zt_server *server, bool open) {
  * where its packages install it. */
 static void load_logo(struct zt_server *server) {
 	static const char *candidates[] = {
-		"/usr/share/pixmaps/archlinux-logo.svg",
-		"/usr/share/icons/hicolor/scalable/apps/archlinux-logo.svg",
-		"/usr/share/pixmaps/archlinux.svg",
+		"/run/current-system/sw/share/ztos/ztos-logo.svg",
+		"/var/lib/ztos/share/ztos-logo.svg",
+		"/usr/share/pixmaps/ztos-logo.svg",
+		"/usr/local/share/icons/hicolor/scalable/apps/ztos-logo.svg",
 		NULL,
 	};
 	for (int i = 0; candidates[i] && !server->logo; i++) {

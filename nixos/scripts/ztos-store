@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# ztos-store: ztOS's no-profile package store.
+#
+# A package is never added to a user profile. "pin" builds it, keeps the output
+# alive with a GC root, records the flake reference and writes a launcher that
+# calls ztos-run. "remove" drops the root and the launcher; the next GC is free
+# to collect the package.
+set -euo pipefail
+
+ROOT=/nix/var/nix/gcroots/ztos/apps
+STATE=/var/lib/ztos/apps
+DESKTOP=/var/lib/ztos/share/applications
+
+usage() {
+  cat <<'EOF'
+usage: ztos-store COMMAND
+
+  search QUERY...     search nixpkgs
+  pin REF             build REF, keep it alive and add it to the app list
+  remove NAME         remove a pinned app
+  list                show pinned apps
+  run REF [ARGS...]   run REF without pinning it
+EOF
+}
+
+name_from_ref() {
+  local ref=$1 attr name
+  attr=${ref##*#}
+  attr=${attr%%\[*}
+  name=${attr##*.}
+  name=${name//[^A-Za-z0-9._+-]/-}
+  printf '%s\n' "${name:-app}"
+}
+
+require_root() {
+  if [ "$(id -u)" -ne 0 ]; then
+    echo "ztos-store: this command changes the system; run it with sudo" >&2
+    exit 1
+  fi
+}
+
+cmd_search() {
+  exec nix search nixpkgs "$@"
+}
+
+cmd_pin() {
+  if [ "$#" -ne 1 ]; then
+    echo "usage: ztos-store pin REF" >&2
+    exit 2
+  fi
+  require_root
+
+  local ref=$1 name
+  name=$(name_from_ref "$ref")
+
+  install -d "$ROOT" "$STATE" "$DESKTOP"
+  nix build --out-link "$ROOT/$name" "$ref"
+  printf '%s\n' "$ref" >"$STATE/$name.ref"
+
+  cat >"$DESKTOP/$name.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=$name
+Comment=Pinned by ztos-store
+Exec=ztos-run $ref
+TryExec=ztos-run
+Terminal=false
+Categories=System;
+EOF
+
+  echo "pinned $name -> $ref"
+}
+
+cmd_remove() {
+  if [ "$#" -ne 1 ]; then
+    echo "usage: ztos-store remove NAME" >&2
+    exit 2
+  fi
+  require_root
+
+  local name=$1
+  rm -f "$ROOT/$name" "$STATE/$name.ref" "$DESKTOP/$name.desktop"
+  echo "removed $name"
+}
+
+cmd_list() {
+  local ref
+  if ! compgen -G "$STATE/*.ref" >/dev/null; then
+    echo "no pinned apps"
+    return
+  fi
+  for ref in "$STATE"/*.ref; do
+    printf '%-24s %s\n' "$(basename "$ref" .ref)" "$(cat "$ref")"
+  done
+}
+
+cmd_run() {
+  exec ztos-run "$@"
+}
+
+case "${1:-}" in
+  search)
+    shift
+    cmd_search "$@"
+    ;;
+  pin)
+    shift
+    cmd_pin "$@"
+    ;;
+  remove)
+    shift
+    cmd_remove "$@"
+    ;;
+  list)
+    cmd_list
+    ;;
+  run)
+    shift
+    cmd_run "$@"
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac

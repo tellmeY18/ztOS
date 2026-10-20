@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# ztos-run: run a package straight from its flake input, without installing it
+# into a profile. The store path is kept alive by the Nix store's GC only while
+# something references it, so a run leaves no profile behind.
+#
+#   ztos-run firefox
+#   ztos-run nixpkgs#firefox -- --private-window
+#   ztos-run github:owner/repo#package
+set -euo pipefail
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: ztos-run PACKAGE [-- ARGUMENTS...]" >&2
+  exit 2
+fi
+
+ref=$1
+shift
+
+case "$ref" in
+  *"#"* | *:*) ;;
+  *) ref="nixpkgs#$ref" ;;
+esac
+
+exec nix run "$ref" -- "$@"
