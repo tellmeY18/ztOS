@@ -1,19 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-image=${1:-./ztos-qemu.qcow2}
-[ -f "$image" ] || {
-	echo "usage: ztos-qemu /path/to/ztos-qemu.qcow2" >&2
+bundle=${1:-./result}
+if [ -d "$bundle" ]; then
+	dir=$bundle
+elif [ -f "$bundle" ]; then
+	dir=$(dirname "$bundle")
+else
+	echo "usage: ztos-qemu /path/to/result-directory" >&2
+	exit 1
+fi
+
+kernel=$dir/Image
+initrd=$dir/initrd
+rootfs=$dir/rootfs.img
+for f in "$kernel" "$initrd" "$rootfs"; do
+	[ -f "$f" ] || {
+		echo "missing $f; run: nix build .#images.qemu" >&2
+		exit 1
+	}
+done
+
+qemu=$(command -v qemu-system-aarch64) || {
+	echo "qemu-system-aarch64 is not in PATH; run this from nix develop" >&2
 	exit 1
 }
-
-qemu=$(command -v qemu-system-aarch64)
-share=$(cd "$(dirname "$qemu")/../share/qemu" && pwd)
-vars=$(dirname "$image")/efi-vars.fd
-if [ ! -f "$vars" ]; then
-	vars=$(mktemp -t ztos-efi-vars.XXXXXX)
-	cp "$share/edk2-arm-vars.fd" "$vars"
-fi
 
 accel=tcg
 cpu=max
@@ -36,9 +47,10 @@ exec "$qemu" \
 	-accel "$accel" \
 	-smp 4 \
 	-m 4096 \
-	-drive if=pflash,format=raw,readonly=on,file="$share/edk2-aarch64-code.fd" \
-	-drive if=pflash,format=raw,file="$vars" \
-	-drive file="$image",if=virtio,format=qcow2 \
+	-kernel "$kernel" \
+	-initrd "$initrd" \
+	-append "root=/dev/vda rw rootfstype=ext4 console=ttyAMA0" \
+	-drive "file=$rootfs,if=virtio,format=raw" \
 	-device virtio-gpu-pci \
 	-device qemu-xhci \
 	-device usb-kbd \

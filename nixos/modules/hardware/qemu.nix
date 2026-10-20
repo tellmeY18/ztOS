@@ -13,24 +13,18 @@ in
   imports = [ "${modulesPath}/profiles/qemu-guest.nix" ];
 
   config = lib.mkIf (cfg.enable && cfg.hardware == "qemu") {
-    boot.loader.systemd-boot.enable = true;
-    boot.loader.efi.canTouchEfiVariables = true;
+    # The QEMU image is booted directly with -kernel/-initrd, so it needs no
+    # bootloader or EFI system partition.
+    boot.loader.grub.enable = false;
+    boot.loader.systemd-boot.enable = false;
+    boot.loader.efi.canTouchEfiVariables = false;
 
     fileSystems."/" = {
-      device = "/dev/disk/by-partlabel/ztos-root";
+      device = "/dev/vda";
       fsType = "ext4";
       options = [
         "rw"
         "relatime"
-      ];
-    };
-
-    fileSystems."/boot" = {
-      device = "/dev/disk/by-partlabel/ztos-esp";
-      fsType = "vfat";
-      options = [
-        "fmask=0077"
-        "dmask=0077"
       ];
     };
 
