@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+image=${1:-./ztos-qemu.qcow2}
+[ -f "$image" ] || {
+	echo "usage: ztos-qemu /path/to/ztos-qemu.qcow2" >&2
+	exit 1
+}
+
+qemu=$(command -v qemu-system-aarch64)
+share=$(cd "$(dirname "$qemu")/../share/qemu" && pwd)
+vars=$(dirname "$image")/efi-vars.fd
+if [ ! -f "$vars" ]; then
+	vars=$(mktemp -t ztos-efi-vars.XXXXXX)
+	cp "$share/edk2-arm-vars.fd" "$vars"
+fi
+
+accel=tcg
+cpu=max
+case "$(uname -s)" in
+Darwin)
+	accel=hvf
+	cpu=host
+	;;
+Linux)
+	if [ -w /dev/kvm ]; then
+		accel=kvm
+		cpu=host
+	fi
+	;;
+esac
+
+exec "$qemu" \
+	-machine virt,highmem=on \
+	-cpu "$cpu" \
+	-accel "$accel" \
+	-smp 4 \
+	-m 4096 \
+	-drive if=pflash,format=raw,readonly=on,file="$share/edk2-aarch64-code.fd" \
+	-drive if=pflash,format=raw,file="$vars" \
+	-drive file="$image",if=virtio,format=qcow2 \
+	-device virtio-gpu-pci \
+	-device qemu-xhci \
+	-device usb-kbd \
+	-device usb-tablet \
+	-nic user,model=virtio-net-pci \
+	-serial mon:stdio \
+	-display "${ZTOS_QEMU_DISPLAY:-default}"

@@ -10,6 +10,7 @@
     let
       systems = [
         "aarch64-linux"
+        "aarch64-darwin"
         "x86_64-linux"
       ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
@@ -57,11 +58,37 @@
         config = self.nixosConfigurations.ztos-starlte.config;
       };
 
+      images.qemu = import ./nixos/images/qemu.nix {
+        pkgs = nixpkgs.legacyPackages.aarch64-linux;
+        config = self.nixosConfigurations.ztos-qemu.config;
+      };
+
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           packages = with pkgs; [
             bashInteractive
             pkg-config
+            zlib
+
+            # Run the QEMU image without touching the host's package manager.
+            qemu
+            e2fsprogs
+            dosfstools
+            mtools
+            gptfdisk
+            cpio
+            xz
+            zstd
+            (pkgs.writeShellApplication {
+              name = "ztos-qemu";
+              runtimeInputs = [
+                pkgs.qemu
+                pkgs.coreutils
+              ];
+              text = builtins.readFile ./nixos/scripts/run-qemu;
+            })
+          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux (with pkgs; [
+            # Build-side and desktop dependencies for the native Linux shell.
             wayland-scanner
             wlroots_0_20
             wayland
@@ -77,8 +104,10 @@
             libpulseaudio
             polkit
             systemd
-            zlib
-          ];
+            qemu-utils
+            parted
+            util-linux
+          ]);
         };
       });
     };

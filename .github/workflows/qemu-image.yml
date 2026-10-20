@@ -1,0 +1,44 @@
+name: ztOS QEMU image
+
+on:
+  push:
+    branches:
+      - nixos-experimentation
+    paths:
+      - "flake.nix"
+      - "nixos/images/qemu.nix"
+      - "nixos/modules/hardware/qemu.nix"
+      - "nixos/configurations/qemu.nix"
+      - "nixos/scripts/run-qemu"
+      - ".github/workflows/qemu-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build QEMU qcow2
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Build
+        run: |
+          set -euxo pipefail
+          nix build .#images.qemu -L
+          mkdir -p artifacts
+          cp -L result/* artifacts/
+          ls -lh artifacts
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ztos-qemu-image
+          path: artifacts/
+          if-no-files-found: error
