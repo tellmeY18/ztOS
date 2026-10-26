@@ -1,0 +1,47 @@
+name: ztOS Pixel 4 image
+
+on:
+  push:
+    branches:
+      - nixos-experimentation
+    paths:
+      - "flake.nix"
+      - "nixos/images/flame.nix"
+      - "nixos/modules/hardware/flame.nix"
+      - "nixos/configurations/flame.nix"
+      - "nixos/packages/linux-flame.nix"
+      - "nixos/packages/uboot-flame.nix"
+      - "nixos/packages/firmware-flame.nix"
+      - "nixos/packages/flame/**"
+      - ".github/workflows/flame-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build Pixel 4 bundle
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Build
+        run: |
+          set -euxo pipefail
+          nix build .#images.flame -L
+          mkdir -p artifacts
+          cp -L result/* artifacts/
+          ls -lh artifacts
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ztos-flame-image
+          path: artifacts/
+          if-no-files-found: error

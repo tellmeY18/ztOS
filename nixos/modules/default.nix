@@ -7,5 +7,6 @@
     ./store.nix
     ./hardware/qemu.nix
     ./hardware/starlte.nix
+    ./hardware/flame.nix
   ];
 }

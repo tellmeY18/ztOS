@@ -31,6 +31,7 @@ in
         "generic"
         "qemu"
         "starlte"
+        "flame"
       ];
       default = "generic";
       description = "The hardware profile ztOS is built for.";

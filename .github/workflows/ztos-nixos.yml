@@ -35,6 +35,7 @@ jobs:
           nix eval --raw .#nixosConfigurations.ztos-qemu.config.system.build.toplevel.drvPath
           nix eval --raw .#nixosConfigurations.ztos-starlte.config.system.build.toplevel.drvPath
           nix eval --raw .#images.starlte.drvPath
+          nix eval --raw .#images.flame.drvPath
 
   image:
     name: Build starlte boot and rootfs images

@@ -248,6 +248,7 @@
         </ul>
       </li>
       <li><a href="#ztconflo">ztConflo: other phones</a></li>
+      <li><a href="#flame">The Pixel 4 port</a></li>
       <li><a href="#status">Status and next</a></li>
       <li><a href="#see-also">See also</a></li>
     </ul>
@@ -268,7 +269,7 @@
         <p class="crumb">Zerone Laboratories / operating systems</p>
         <h1>ztOS</h1>
         <p class="lead">A phone operating system with Windows Phone 8.1's look and motion, built on NixOS and mainline Linux.</p>
-        <p>ztOS is the ztMETRO shell, its own apps, an updater, a package store and an SDK for apps in Python and Qt, on an ordinary NixOS system. It runs on the Samsung Galaxy S9 (SM-G960N, starlte) and in the QEMU emulator. Everything that moves is drawn by the GPU.</p>
+        <p>ztOS is the ztMETRO shell, its own apps, an updater, a package store and an SDK for apps in Python and Qt, on an ordinary NixOS system. It runs on the Samsung Galaxy S9 (SM-G960N, starlte) and in the QEMU emulator, and a Pixel 4 (flame) port is in progress. Everything that moves is drawn by the GPU.</p>
         <p>It is alpha software. The S9 port runs a mainline 7.1 kernel with the phone's GPU, display, touch, Wi-Fi, 4G data, sound and sensors working. ztConflo, its image builder, is how it reaches other phones.</p>
         <div class="actions">
           <a class="btn" href="#installing">Install it</a>
@@ -282,7 +283,7 @@
           <dt>Shell</dt><dd>ztMETRO</dd>
           <dt>Base</dt><dd>NixOS, systemd</dd>
           <dt>Kernel</dt><dd>Mainline Linux 7.1</dd>
-          <dt>Devices</dt><dd>Galaxy S9 (starlte), QEMU; others through <a href="#ztconflo">ztConflo</a></dd>
+          <dt>Devices</dt><dd>Galaxy S9 (starlte), Pixel 4 (flame, in progress), QEMU; others through <a href="#ztconflo">ztConflo</a></dd>
           <dt>Graphics</dt><dd>Mesa Panfrost, OpenGL ES 3.1 on the S9's Mali-G72</dd>
           <dt>Apps</dt><dd>Native C apps, and Python and Qt through the SDK</dd>
           <dt>Written in</dt><dd>C, Python, shell</dd>
@@ -474,6 +475,52 @@ ztos-sdk logs -f         <span class="c"># what it prints, on the phone</span></
           <a class="btn" href="https://zerone-laboratories.web.app/ztconflo/">Read the ztConflo article</a>
           <a class="btn ghost" href="https://github.com/Zerone-Laboratories/ztconflo">ztConflo source</a>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="flame">
+    <div class="wrap">
+      <div><h2>The Pixel 4 port</h2><p class="sub">Mainline Linux on a Snapdragon 855.</p></div>
+      <div class="body">
+        <p>The second phone is the Google Pixel 4, <code>flame</code> (G020N). The port is built in NixOS from the start, on the same SM8150 kernel the <a href="https://wiki.nura.eco/wiki/Google_Pixel_4_(google-flame)">Nura</a> (formerly postmarketOS) <code>device-google-flame</code> port uses, because it is the only tree with the Pixel 4's panel and touch drivers. Upstream Linux still has no <code>sm8150-google-flame</code> device tree.</p>
+        <p>The stock ABL cannot load a mainline kernel, so the boot chain puts U-Boot in <code>boot</code>:</p>
+        <pre><code>ABL -> U-Boot in boot_a -> extlinux.conf in the userdata ext4 -> Image + dtb</code></pre>
+
+        <h3 id="flame-installing">Installing</h3>
+        <div class="alert" role="note">
+          <b>This erases the phone</b>
+          Android and everything in the 64 or 128 GB of storage are replaced, because the ztOS root filesystem is written to <code>userdata</code>. <code>boot</code> is replaced with U-Boot. Every other partition is left alone, so Google's factory image can put Android back.
+        </div>
+        <p>You need an <code>aarch64-linux</code> build machine (or the CI artifact), a USB-C cable, the phone charged above 50%, and an unlocked bootloader. Unlocking is in Android under Developer options and does not need an unlock code on this phone.</p>
+        <ol class="steps">
+          <li><div><b>Put the phone in fastboot mode</b><span>Hold Power and Volume Down until the bootloader screen appears. Connect the USB-C cable.</span></div></li>
+          <li><div><b>Get ztOS on the computer</b><span><code>git clone https://github.com/Zerone-Laboratories/ztOS.git</code><br><code>cd ztOS</code></span></div></li>
+          <li><div><b>Build the NixOS image</b><span><code>nix build .#images.flame -L</code><br>The first build compiles the SM8150 kernel and U-Boot, so it takes a while. On macOS, use the CI-built <code>ztos-flame-image</code> artifact instead.</span></div></li>
+          <li><div><b>Flash it</b><span><code>./result/flash.sh</code><br>Type <code>ERASE</code> when asked. It writes U-Boot to <code>boot</code> and the root filesystem to <code>userdata</code>, then reboots.</span></div></li>
+          <li><div><b>Watch it start</b><span>The kernel and device tree are read from <code>/boot</code> inside the ext4 filesystem. The first start has no initramfs, so the display or <code>ttyMSM0</code> should show kernel messages almost immediately.</span></div></li>
+        </ol>
+
+        <h3 id="flame-hardware">Hardware status</h3>
+        <p>The image builds. It has not run on a phone yet, so the table below is what the Nura port reports for the same hardware and kernel, not a ztOS measurement.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Part</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Display, 1080×2280 90 Hz</td><td>Works in Nura</td><td>LG LH568WF3-ED01 with an NT37280 controller; driver only in the SM8150 fork</td></tr>
+              <tr><td>Touchscreen</td><td>Works in Nura</td><td>Novatek; driver only in the SM8150 fork</td></tr>
+              <tr><td>GPU</td><td>Works in Nura</td><td>Adreno 640 through freedreno, with the signed zap shader</td></tr>
+              <tr><td>Wi-Fi and Bluetooth</td><td>Works in Nura</td><td>WCN3990</td></tr>
+              <tr><td>Battery</td><td>Works in Nura</td><td>MAX17201 gauge</td></tr>
+              <tr><td>Audio, camera, GPS, NFC, sensors</td><td>Not started</td><td>Same gaps as the Nura port</td></tr>
+              <tr><td>Modem (calls, SMS, mobile data)</td><td>Not started</td><td>Needs the qcom modem stack</td></tr>
+              <tr><td>Suspend</td><td>Not started</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="flame-recovery">Getting back in</h3>
+        <p>Fastboot cannot be overwritten, so the phone always comes back: hold Power and Volume Down for the bootloader, then flash Google's factory image for <code>flame</code> to restore Android. U-Boot also keeps its own menu on Volume Down while the Google logo is up, which can boot from USB or drop to a shell.</p>
       </div>
     </div>
   </section>

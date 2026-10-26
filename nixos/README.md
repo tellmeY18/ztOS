@@ -14,14 +14,16 @@ consistent, but it has **not** been boot-tested on a Galaxy S9 yet.
 |---|---|
 | `nixosConfigurations.ztos-qemu` | the QEMU/aarch64 NixOS system |
 | `nixosConfigurations.ztos-starlte` | the Galaxy S9 NixOS system |
+| `nixosConfigurations.ztos-flame` | the Pixel 4 NixOS system |
 | `images.qemu` | direct-boot QEMU bundle: `Image`, `initrd`, `rootfs.img`, `cmdline`, `README` |
 | `images.starlte` | phone bundle: `rootfs.img`, `boot.img`, `flash.sh`, `build.json` |
+| `images.flame` | Pixel 4 bundle: `rootfs.img`, `uboot.img`, `flash.sh`, `build.json`, `README` |
 | `packages.ztmetro` | the shell, apps, helpers, and their systemd units |
-| `devShells.default` | QEMU and image tools; also works on `aarch64-darwin` |
+| `devShells.default` | QEMU, image, and Android flashing tools; also works on `aarch64-darwin` |
 
-The NixOS modules live in `nixos/modules/`. The two hardware profiles are
-`nixos/modules/hardware/qemu.nix` and `nixos/modules/hardware/starlte.nix`.
-The system configurations are in `nixos/configurations/`.
+The NixOS modules live in `nixos/modules/`. The hardware profiles are
+`nixos/modules/hardware/qemu.nix`, `starlte.nix` and `flame.nix`. The system
+configurations are in `nixos/configurations/`.
 
 ## Try it in QEMU
 
@@ -150,6 +152,46 @@ different kernel package.
 This path is ready for hardware testing, not a daily driver. If the phone
 fails to boot, it should still fall back to TWRP. Keep the stock partitions;
 see the [main README](../README.md#troubleshooting).
+
+## Pixel 4 (flame)
+
+```sh
+nix build .#images.flame -L
+ls result
+# build.json  flash.sh  README  rootfs.img  uboot.img
+```
+
+The Pixel 4 cannot boot a mainline kernel from its stock ABL, so the image
+follows the boot chain the Nura (formerly postmarketOS) `device-google-flame`
+port uses:
+
+```
+ABL -> U-Boot in boot_a -> extlinux.conf in the userdata ext4 -> Image + dtb
+```
+
+`flash.sh` puts U-Boot in `boot`, writes the root filesystem to `userdata`, and
+asks for `ERASE` first, because that overwrites Android and everything in its
+storage. Every other partition is left alone, so a stock factory image can put
+Android back.
+
+What the flame image is made of:
+
+- `nixos/packages/linux-flame.nix` — the SM8150 kernel fork the Nura port uses
+  (`linux-postmarketos-qcom-sm8150`), with its own configuration. It is the only
+  tree with the Pixel 4 panel (LG LH568WF3-ED01 / NT37280) and touch drivers;
+  upstream still has no `sm8150-google-flame.dts`.
+- `nixos/packages/uboot-flame.nix` — U-Boot for `sm8150-google-flame`, packed
+  into `uboot.img` with the device tree appended.
+- `nixos/packages/firmware-flame.nix` — WCN3990, ADSP/CDSP/modem, and the signed
+  Adreno 640 zap shader.
+- The kernel has UFS and ext4 built in, so there is no initramfs: the kernel
+  mounts `userdata` directly and firmware is baked into the image's
+  `/lib/firmware` for the GPU probe.
+
+Status: the image builds, but it has not been run on a phone yet. Expect a
+serial console (`ttyMSM0`) or a framebuffer console before a ztMETRO session;
+the GPU, panel and touch bring-up is the remaining work. See the Nura wiki page
+for the hardware that still needs drivers.
 
 ## Configuration
 
