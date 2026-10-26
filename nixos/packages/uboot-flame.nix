@@ -29,9 +29,11 @@ pkgs.stdenv.mkDerivation {
     gnutls
     libuuid
     openssl
+    pkg-config
     python3
     python3Packages.setuptools
     swig
+    xxd
   ];
 
   hardeningDisable = [ "all" ];
