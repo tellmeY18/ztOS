@@ -53,8 +53,10 @@ jobs:
       - name: Flake
         run: |
           set -euxo pipefail
-          nix flake check --no-build --all-systems
+          nix flake show --all-systems > /dev/null
           nix eval --raw .#nixosConfigurations.ztos-flame.config.system.build.toplevel.drvPath
+          nix eval --raw .#packages.aarch64-linux.linux-flame.drvPath
+          nix eval --raw .#packages.aarch64-linux.uboot-flame.drvPath
           nix eval --raw .#images.flame.drvPath
       - name: Plan
         run: |
