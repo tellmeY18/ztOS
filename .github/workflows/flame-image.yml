@@ -1,18 +1,30 @@
 name: ztOS Pixel 4 image
 
+# Three stages, so a broken evaluation fails in a minute instead of after an
+# hour of kernel build, and the finished bundle is inspected before anyone
+# flashes it.
+#
+#   eval    flake evaluates and the image graph can be planned
+#   build   the aarch64 bundle: kernel, U-Boot, ext4 rootfs, flash.sh
+#   verify  unpack the boot image and the rootfs and check the boot chain
+
 on:
   push:
     branches:
       - nixos-experimentation
     paths:
       - "flake.nix"
+      - "flake.lock"
+      - "VERSION"
       - "nixos/images/flame.nix"
       - "nixos/modules/hardware/flame.nix"
       - "nixos/configurations/flame.nix"
+      - "nixos/modules/ztos.nix"
       - "nixos/packages/linux-flame.nix"
       - "nixos/packages/uboot-flame.nix"
       - "nixos/packages/firmware-flame.nix"
       - "nixos/packages/flame/**"
+      - "ztmetro/**"
       - ".github/workflows/flame-image.yml"
   workflow_dispatch:
 
@@ -20,28 +32,116 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    experimental-features = nix-command flakes
+    accept-flake-config = true
+
 jobs:
-  image:
-    name: Build Pixel 4 bundle
+  eval:
+    name: Evaluate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: ${{ env.NIX_CONFIG }}
+      - name: Flake
+        run: |
+          set -euxo pipefail
+          nix flake check --no-build --all-systems
+          nix eval --raw .#nixosConfigurations.ztos-flame.config.system.build.toplevel.drvPath
+          nix eval --raw .#images.flame.drvPath
+      - name: Plan
+        run: |
+          set -euxo pipefail
+          nix build --dry-run .#images.flame 2>&1 | tail -n 3
+
+  build:
+    name: Build bundle
+    needs: eval
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
+          extra_nix_config: ${{ env.NIX_CONFIG }}
       - name: Build
         run: |
           set -euxo pipefail
           nix build .#images.flame -L
           mkdir -p artifacts
           cp -L result/* artifacts/
+          (cd artifacts && sha256sum * > SHA256SUMS)
           ls -lh artifacts
-      - name: Upload image
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ztos-flame-image
           path: artifacts/
           if-no-files-found: error
+          compression-level: 1
+
+  verify:
+    name: Verify boot chain
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: ${{ env.NIX_CONFIG }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: ztos-flame-image
+          path: bundle
+      - name: Checksums
+        run: |
+          set -euxo pipefail
+          cd bundle
+          sha256sum -c SHA256SUMS
+      - name: Boot image
+        run: |
+          set -euxo pipefail
+          cd bundle
+          nix develop --command unpack_bootimg --boot_img uboot.img --out uboot
+          test -s uboot/kernel
+      - name: Root filesystem
+        run: |
+          set -euxo pipefail
+          cd bundle
+          debugfs -R "ls -l /boot" rootfs.img
+          debugfs -R "cat /boot/extlinux/extlinux.conf" rootfs.img | tee /tmp/extlinux.conf
+          grep -q 'root=PARTLABEL=userdata' /tmp/extlinux.conf
+          grep -q 'FDT /boot/sm8150-google-flame.dtb' /tmp/extlinux.conf
+          debugfs -R "stat /boot/Image" rootfs.img | grep -E "Size|Type: regular"
+          debugfs -R "stat /boot/sm8150-google-flame.dtb" rootfs.img | grep -E "Size|Type: regular"
+          debugfs -R "stat /sbin/init" rootfs.img | grep -E "Type: symlink"
+          debugfs -R "ls -l /lib/firmware/qcom" rootfs.img | head -20
+      - name: Flash script
+        run: |
+          set -euxo pipefail
+          cd bundle
+          sh -n flash.sh
+          grep -q 'getvar product' flash.sh
+          grep -q 'flash boot_a' flash.sh
+          python3 -m json.tool build.json
+      - name: Summary
+        run: |
+          {
+            echo "## Pixel 4 bundle"
+            echo
+            echo '| File | Size |'
+            echo '|---|---|'
+            (cd bundle && ls -l --block-size=1M | awk 'NR>1 {printf "| %s | %s |\n", $9, $5}')
+            echo
+            echo '```'
+            nix develop --command unpack_bootimg --boot_img bundle/uboot.img | head -20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

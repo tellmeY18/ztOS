@@ -12,7 +12,10 @@ let
   # configuration is the fork's own, unmodified.
   src = pkgs.fetchzip {
     url = "https://gitlab.postmarketos.org/soc/qualcomm-sm8150/linux/-/archive/v${version}-sm8150/linux-v${version}-sm8150.tar.gz";
-    hash = "sha256-gAhDX8VQprT17TzucVs9jPqkKYjvCympOKIKEt00v1o=";
+    # The Linux-computed hash. Unpacking this archive on a case-insensitive
+    # filesystem (macOS) merges the files whose names differ only in case, so
+    # a hash taken there does not match the tree Linux unpacks.
+    hash = "sha256-UNqp064EqWB05eywNYF/oZJVn7Ar3C7Vl8SymUa6qMI=";
   };
 in
 pkgs.linuxKernel.manualConfig {
